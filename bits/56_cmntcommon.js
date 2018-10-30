@@ -1,3 +1,4 @@
+RELS.CMNT = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments";
 
 function parse_comments(zip, dirComments, sheets, sheetRels, opts) {
 	for(var i = 0; i != dirComments.length; ++i) {
@@ -17,12 +18,19 @@ function parse_comments(zip, dirComments, sheets, sheetRels, opts) {
 	}
 }
 
-function insertCommentsIntoSheet(sheetName, sheet, comments) {
+function insertCommentsIntoSheet(sheetName, sheet, comments/*:Array<RawComment>*/) {
+	var dense = Array.isArray(sheet);
+	var cell/*:Cell*/, r;
 	comments.forEach(function(comment) {
-		var cell = sheet[comment.ref];
+		if(dense) {
+			r = decode_cell(comment.ref);
+			if(!sheet[r.r]) sheet[r.r] = [];
+			cell = sheet[r.r][r.c];
+		} else cell = sheet[comment.ref];
 		if (!cell) {
 			cell = {};
-			sheet[comment.ref] = cell;
+			if(dense) sheet[r.r][r.c] = cell;
+			else sheet[comment.ref] = cell;
 			var range = safe_decode_range(sheet["!ref"]||"BDWGO1000001:A1");
 			var thisCell = decode_cell(comment.ref);
 			if(range.s.r > thisCell.r) range.s.r = thisCell.r;
@@ -34,7 +42,7 @@ function insertCommentsIntoSheet(sheetName, sheet, comments) {
 		}
 
 		if (!cell.c) cell.c = [];
-		var o = {a: comment.author, t: comment.t, r: comment.r};
+		var o/*:Comment*/ = ({a: comment.author, t: comment.t, r: comment.r});
 		if(comment.h) o.h = comment.h;
 		cell.c.push(o);
 	});
